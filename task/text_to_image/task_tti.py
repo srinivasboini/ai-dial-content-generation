@@ -36,40 +36,58 @@ class Quality:
     hd: str = "hd"
 
 async def _save_images(attachments: list[Attachment]):
-    # TODO:
-    #  1. Create async context manager: async with DialBucketClient(api_key=API_KEY, base_url=DIAL_URL) as bucket_client:
-    #  2. Inside context manager, loop through attachments: for attachment in attachments:
-    #  3. Check if attachment is image: if attachment.type and attachment.type == 'image/png':
-    #  4. Download image: image_data = await bucket_client.get_file(attachment.url) (returns bytes)
-    #  5. Create filename: filename = f"{datetime.now()}.png"
-    #  6. Save image to file:
-    #    - with open(filename, 'wb') as f:
-    #    - f.write(image_data)
-    #  7. Print confirmation: print(f"Image saved: {filename}")
-    raise NotImplementedError
+    async with DialBucketClient(api_key=API_KEY, base_url=DIAL_URL) as bucket_client:
+        for attachment in attachments:
+            if attachment.type and attachment.type == 'image/png':
+                image_data = await bucket_client.get_file(attachment.url)
+                filename = f"{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+                with open(filename, 'wb') as f:
+                    f.write(image_data)
+                print(f"Image saved: {filename}")
 
 
 def start() -> None:
-    # TODO:
-    #  1. Create DialModelClient instance:
-    #    - endpoint: DIAL_CHAT_COMPLETIONS_ENDPOINT
-    #    - deployment_name: 'dall-e-3'
-    #    - api_key: API_KEY
-    #    - Store in variable: dalle_client
-    #  2. Set user input:
-    #    - user_input = 'Sunny day on Bali' (or whatever you want to generate)
-    #  3. Generate image: ai_message = dalle_client.get_completion(
-    #                           messages=[Message(role=Role.USER, content=user_input)]
-    #                     )
-    #  4. Check for attachments and save:
-    #    - if custom_content := ai_message.custom_content:
-    #    - if attachments := custom_content.attachments:
-    #    - asyncio.run(_save_images(attachments))
-    #  5. Try to configure the picture for output via `custom_fields` parameter.
-    #    - custom_fields={"size": Size.square, "style": Style.vivid, "quality": Quality.hd}
-    #    - Documentation: See `custom_fields`. https://dialx.ai/dial_api#operation/sendChatCompletionRequest
-    #  6. Optional: Test it with the 'imagegeneration@005' (Google image generation model)
-    raise NotImplementedError
+    # 1. Create DialModelClient instance
+    dalle_client = DialModelClient(
+        endpoint=DIAL_CHAT_COMPLETIONS_ENDPOINT,
+        deployment_name='dall-e-3',
+        api_key=API_KEY
+    )
+
+    # 2. Set user input
+    user_input = 'Sunny day on Bali'
+    
+    # 3. Generate image
+    print(f"Generating image for: {user_input}...")
+    ai_message = dalle_client.get_completion(
+        messages=[Message(role=Role.USER, content=user_input)]
+    )
+
+    # 4. Check for attachments and save
+    if (custom_content := ai_message.custom_content) and (attachments := custom_content.attachments):
+        asyncio.run(_save_images(attachments))
+
+    # 5. Try to configure the picture for output via `custom_fields`
+    print(f"Generating HD vivid image for: {user_input}...")
+    ai_message_custom = dalle_client.get_completion(
+        messages=[Message(role=Role.USER, content=user_input)],
+        custom_fields={"size": Size.square, "style": Style.vivid, "quality": Quality.hd}
+    )
+    if (custom_content := ai_message_custom.custom_content) and (attachments := custom_content.attachments):
+        asyncio.run(_save_images(attachments))
+
+    # 6. Test it with the 'imagegeneration@005' (Google image generation model)
+    print(f"Generating image with Google model (imagegeneration@005) for: {user_input}...")
+    google_client = DialModelClient(
+        endpoint=DIAL_CHAT_COMPLETIONS_ENDPOINT,
+        deployment_name='imagegeneration@005',
+        api_key=API_KEY
+    )
+    ai_message_google = google_client.get_completion(
+        messages=[Message(role=Role.USER, content=user_input)]
+    )
+    if (custom_content := ai_message_google.custom_content) and (attachments := custom_content.attachments):
+        asyncio.run(_save_images(attachments))
 
 
 start()
