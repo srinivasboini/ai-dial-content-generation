@@ -32,7 +32,7 @@ async def _put_image() -> Attachment:
 def start() -> None:
     dalle_client = DialModelClient(
         endpoint=DIAL_CHAT_COMPLETIONS_ENDPOINT,
-        deployment_name='anthropic.claude-v3-haiku',
+        deployment_name='gpt-4o',
         api_key=API_KEY
     )
 
